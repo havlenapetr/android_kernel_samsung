@@ -859,7 +859,7 @@ void s5p_handle_cable(void)
 	char *envp[2];
 	int env_offset = 0;
 
-	printk(KERN_INFO "%s....start", __func__);
+	BASEPRINTK("%s....start\n", __func__);
 
 	if ((s5ptv_status.tvout_param.out_mode != TVOUT_OUTPUT_HDMI) && \
 	(s5ptv_status.tvout_param.out_mode != TVOUT_OUTPUT_HDMI_RGB) && \

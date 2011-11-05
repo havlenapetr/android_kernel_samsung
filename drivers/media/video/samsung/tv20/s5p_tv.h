@@ -24,7 +24,7 @@
 #include "s5pc100/tv_out_s5pc100.h"
 #endif
 
-/* #define COFIG_TVOUT_DBG */
+#define COFIG_TVOUT_DBG
 
 #ifdef CONFIG_CPU_S5PC100
 #define FIX_27M_UNSTABLE_ISSUE
