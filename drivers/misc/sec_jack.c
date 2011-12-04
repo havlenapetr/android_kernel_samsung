@@ -361,6 +361,75 @@ void sec_jack_buttons_work(struct work_struct *work)
 	pr_warn("%s: key is skipped. ADC value is %d\n", __func__, adc);
 }
 
+static ssize_t select_jack_show(struct device *dev,
+                                struct device_attribute *attr, char *buf)
+{
+	struct sec_jack_info *hi = dev_get_drvdata(dev);
+	pr_info("%s : jack type=%i\n", __func__, hi->cur_jack_type);
+    return 0;
+}
+
+static ssize_t select_jack_store(struct device *dev,
+                                 struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct sec_jack_info *hi = dev_get_drvdata(dev);
+	struct sec_jack_platform_data *pdata = hi->pdata;
+	int value = 0;
+    
+    // if we are in auto(irq mode) and cable is insterted, don't allow to
+    // change mode by this manual switch
+    if (hi->det_irq != -1 && hi->cur_jack_type != SEC_JACK_NO_DEVICE) {
+        pr_err("%s : Failed to set cur_jack_type when cable is inserted.\n", __func__);
+        goto end;
+    }
+
+	sscanf(buf, "%d", &value);
+	pr_info("%s: user  selection : 0X%x", __func__, value);
+    
+    // if we manually setting jack_type and irq is enabled
+    // we should disable it
+    if (value != SEC_JACK_NO_DEVICE && hi->det_irq != -1) {
+        pr_info("%s: disabling irq mode", __func__);
+        disable_irq_wake(hi->det_irq);
+        free_irq(hi->det_irq, hi);
+        hi->det_irq = -1;
+    }
+
+	if (value == SEC_HEADSET_4POLE) {
+		pdata->set_micbias_state(true);
+		msleep(100);
+	}
+	sec_jack_set_type(hi, value);
+    
+    // when we manually set jack_type to none, we should enable
+    // irq back, for auto detection
+    if (value == SEC_JACK_NO_DEVICE) {
+        pr_info("%s: enabling irq mode", __func__);
+        hi->det_irq = gpio_to_irq(pdata->det_gpio);
+        int ret = request_threaded_irq(hi->det_irq, NULL,
+                                   sec_jack_detect_irq_thread,
+                                   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+                                   IRQF_ONESHOT, "sec_headset_detect", hi);
+        if (ret) {
+            pr_err("%s : Failed to request_irq.\n", __func__);
+            goto end;
+        }
+        
+        /* to handle insert/removal when we're sleeping in a call */
+        ret = enable_irq_wake(hi->det_irq);
+        if (ret) {
+            pr_err("%s : Failed to enable_irq_wake.\n", __func__);
+            free_irq(hi->det_irq, hi);
+            goto end;
+        }
+    }
+
+end:
+	return size;
+}
+
+static DEVICE_ATTR(select_jack, S_IRUGO | S_IWUSR | S_IWGRP, select_jack_show, select_jack_store);
+
 static int sec_jack_probe(struct platform_device *pdev)
 {
 	struct sec_jack_info *hi;
@@ -430,6 +499,20 @@ static int sec_jack_probe(struct platform_device *pdev)
 	}
 
 	hi->det_irq = gpio_to_irq(pdata->det_gpio);
+
+    struct class *jack_class = class_create(THIS_MODULE, "jack");
+	if (IS_ERR(jack_class))
+		pr_err("Failed to create class(sec_jack)\n");
+
+	/* support PBA function test */
+	struct device *jack_dev = device_create(jack_class, NULL, 0, hi, "jack_selector");
+	if (IS_ERR(jack_dev))
+		pr_err("Failed to create device(sec_jack)!= %ld\n",
+               IS_ERR(jack_dev));
+
+	if (device_create_file(jack_dev, &dev_attr_select_jack) < 0)
+		pr_err("Failed to create device file(%s)!\n",
+               dev_attr_select_jack.attr.name);
 
 	set_bit(EV_KEY, hi->ids.evbit);
 	hi->ids.flags = INPUT_DEVICE_ID_MATCH_EVBIT;
