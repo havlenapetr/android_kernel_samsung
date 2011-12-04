@@ -24,6 +24,7 @@
 #include "s5pc100/tv_out_s5pc100.h"
 #endif
 
+#define COFIG_TVOUT_RAW_DBG
 #define COFIG_TVOUT_DBG
 
 #ifdef CONFIG_CPU_S5PC100
