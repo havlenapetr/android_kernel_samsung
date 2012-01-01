@@ -199,5 +199,6 @@ extern void *s3c_set_platdata(void *pd, size_t pdsize,
 			      struct platform_device *pdev);
 
 void __init s3c_usb_set_serial(void);
+void __init s3c_power_set_mode(bool charger);
 
 #endif /* __PLAT_DEVS_H */
