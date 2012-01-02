@@ -39,11 +39,6 @@
 #endif
 #include "s3cfb.h"
 
-#ifdef CONFIG_MACH_ARIES
-#include "logo_rgb24_wvga_portrait.h"
-#include <mach/regs-clock.h>
-#endif
-
 #if (CONFIG_FB_S3C_NUM_OVLY_WIN >= CONFIG_FB_S3C_DEFAULT_WINDOW)
 #error "FB_S3C_NUM_OVLY_WIN should be less than FB_S3C_DEFAULT_WINDOW"
 #endif
@@ -110,11 +105,6 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 				fb->var.yres * fb->fix.line_length);
 		iounmap(logo_virt_buf);
 	}
-#else /*CONFIG_SAMSUNG_GALAXYS*/
-	if (readl(S5P_INFORM5)) //LPM_CHARGING mode
-		memcpy(fb->screen_base, charging, fb->var.yres * fb->fix.line_length);
-	else
-		memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
 #endif
 	return 0;
 }
@@ -815,7 +805,7 @@ static int s3cfb_alloc_framebuffer(struct s3cfb_global *ctrl)
 		s3cfb_init_fbinfo(ctrl, i);
 
 		if (i == pdata->default_win) {
-			if (s3cfb_map_video_memory(ctrl->fb[i])) {
+			if (s3cfb_map_default_video_memory(ctrl->fb[i])) {
 				dev_err(ctrl->dev,
 					"failed to map video memory "
 					"for default window (%d)\n", i);
