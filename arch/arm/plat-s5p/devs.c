@@ -41,39 +41,6 @@
 #include <mach/media.h>
 #include <s3cfb.h>
 
-/* Android Gadget */
-// Ugly hack to inject device serial into /proc/cmdline
-void __init s3c_usb_set_serial(void)
-{
-	char *new_command_line;
-	int size;
-
-	size = strlen(boot_command_line);
-	new_command_line = kmalloc(size + 40, GFP_KERNEL);
-	strcpy(new_command_line, saved_command_line);
-	sprintf(new_command_line + size, " androidboot.serialno=%08X%08X",
-			system_serial_high, system_serial_low);
-	saved_command_line = new_command_line;
-}
-
-// Ugly hack to inject charger mode into /proc/cmdline
-void __init s3c_power_set_mode(bool charger)
-{
-	char *new_command_line;
-	int size;
-
-    // if not charger mode, than exit
-    if (!charger) {
-        return;
-    }
-
-	size = strlen(saved_command_line);
-	new_command_line = kmalloc(size + 25, GFP_KERNEL);
-	strcpy(new_command_line, saved_command_line);
-	sprintf(new_command_line + size, " androidboot.mode=charger");
-	saved_command_line = new_command_line;
-}
-
 /* RTC */
 static struct resource s5p_rtc_resource[] = {
 	[0] = {

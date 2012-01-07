@@ -132,6 +132,8 @@ EXPORT_SYMBOL(sec_get_param_value);
 
 #define WLAN_SKB_BUF_NUM	16
 
+#define SAMSUNG_REBOOT_MODE_RECOVERY	2
+
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
 
 struct wifi_mem_prealloc {
@@ -146,9 +148,7 @@ static int aries_notifier_call(struct notifier_block *this,
 
 	if ((code == SYS_RESTART) && _cmd) {
 		if (!strcmp((char *)_cmd, "recovery"))
-			mode = REBOOT_MODE_RECOVERY;
-		else if (!strcmp((char *)_cmd, "bootloader"))
-			mode = REBOOT_MODE_FAST_BOOT;
+			mode = SAMSUNG_REBOOT_MODE_RECOVERY; // It's not REBOOT_MODE_RECOVERY, blame Samsung
 		else
 			mode = REBOOT_MODE_NONE;
 	}
@@ -4110,7 +4110,7 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 	// GPA1 ---------------------------------------------------
 	{ S5PV210_GPA1(0), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 	{ S5PV210_GPA1(1), S3C_GPIO_SLP_OUT0,	S3C_GPIO_PULL_NONE},
-#if defined(CONFIG_SAMSUNG_CAPTIVATE) || defined (CONFIG_SAMSUNG_VIBRANT)
+#if defined(CONFIG_SAMSUNG_FASCINATE)
 	{ S5PV210_GPA1(2), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 #else
     { S5PV210_GPA1(2), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},
@@ -4146,17 +4146,21 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 	{ S5PV210_GPC0(0), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},
 	{ S5PV210_GPC0(1), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},
 	{ S5PV210_GPC0(2), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},
-#if defined(CONFIG_SAMSUNG_CAPTIVATE)
-	{ S5PV210_GPC0(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},
-#else
 	{ S5PV210_GPC0(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},
-#endif
 	{ S5PV210_GPC0(4), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},
 
 	// GPC1 ---------------------------------------------------
+#if defined (CONFIG_SAMSUNG_CAPTIVATE)
+  	{ S5PV210_GPC1(0), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPC10
+#else
   	{ S5PV210_GPC1(0), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPC10
+#endif
 	{ S5PV210_GPC1(1), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
+#if defined (CONFIG_SAMSUNG_CAPTIVATE)
+  	{ S5PV210_GPC1(2), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPC12
+#else
   	{ S5PV210_GPC1(2), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPC12
+#endif
 	{ S5PV210_GPC1(3), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 	{ S5PV210_GPC1(4), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 
@@ -4294,13 +4298,15 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 	{ S5PV210_GPG3(2), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},
 #endif
 #if defined (CONFIG_SAMSUNG_CAPTIVATE)
-	{ S5PV210_GPG3(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},    //GPIO_TA_CURRENT_SEL_AP
+  	{ S5PV210_GPG3(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},    //GPIO_TA_CURRENT_SEL_AP
 #else
   	{ S5PV210_GPG3(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_UP},      //GPIO_TA_CURRENT_SEL_AP
 #endif
 	{ S5PV210_GPG3(4), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},    //GPIO_BT_WAKE
 	{ S5PV210_GPG3(5), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_WLAN_WAKE
-#if defined (CONFIG_SAMSUNG_VIBRANT)
+#if defined (CONFIG_SAMSUNG_CAPTIVATE)
+  	{ S5PV210_GPG3(6), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPG36
+#elif defined (CONFIG_SAMSUNG_VIBRANT)
   	{ S5PV210_GPG3(6), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},	//GPIO_GPG36
 #else
   	{ S5PV210_GPG3(6), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPG36
@@ -4357,6 +4363,10 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 #if defined(CONFIG_SAMSUNG_GALAXYSB)
 	{ S5PV210_GPJ2(0), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_NONE}, 	// S5PV210_GPJ0(3)
 	{ S5PV210_GPJ2(1), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_NONE}, 	// S5PV210_GPJ0(4)
+#elif defined (CONFIG_SAMSUNG_CAPTIVATE)
+  	{ S5PV210_GPJ2(0), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPJ20
+  	{ S5PV210_GPJ2(1), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPJ21
+#else
   	{ S5PV210_GPJ2(0), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPJ20
   	{ S5PV210_GPJ2(1), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPJ21
 #endif
@@ -4366,9 +4376,9 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 	{ S5PV210_GPJ2(4), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 	{ S5PV210_GPJ2(5), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
 #elif defined (CONFIG_SAMSUNG_CAPTIVATE)
-	{ S5PV210_GPJ2(3), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},	//GPIO_GPJ23
-	{ S5PV210_GPJ2(4), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},	//NC
-	{ S5PV210_GPJ2(5), S3C_GPIO_SLP_INPUT,	S3C_GPIO_PULL_DOWN},
+  	{ S5PV210_GPJ2(3), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPJ23
+  	{ S5PV210_GPJ2(4), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_UP},	//NC
+  	{ S5PV210_GPJ2(5), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},
 #elif defined (CONFIG_SAMSUNG_VIBRANT)
   	{ S5PV210_GPJ2(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPJ23
   	{ S5PV210_GPJ2(4), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},	//NC
@@ -4389,7 +4399,11 @@ static unsigned int aries_sleep_gpio_table[][3] = {
 	{ S5PV210_GPJ3(0), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//_3_TOUCH_SDA_28V
 	{ S5PV210_GPJ3(1), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//_3_TOUCH_SCL_28V
 	{ S5PV210_GPJ3(2), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//_3_GPIO_TOUCH_EN
+#if defined (CONFIG_SAMSUNG_CAPTIVATE)
+  	{ S5PV210_GPJ3(3), S3C_GPIO_SLP_OUT0,   S3C_GPIO_PULL_NONE},	//GPIO_GPJ33
+#else
   	{ S5PV210_GPJ3(3), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_DOWN},	//GPIO_GPJ33
+#endif
 	{ S5PV210_GPJ3(4), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},	//GPIO_USB_SDA_28V
 	{ S5PV210_GPJ3(5), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},	//GPIO_USB_SCL_28V
 	{ S5PV210_GPJ3(6), S3C_GPIO_SLP_INPUT,  S3C_GPIO_PULL_NONE},	//GPIO_AP_SDA_28V
@@ -5162,13 +5176,37 @@ static void aries_pm_restart(char mode, const char *cmd)
 	arm_machine_restart(mode, cmd);
 }
 
+// Ugly hack to inject parameters (e.g. device serial, bootmode) into /proc/cmdline
+static void __init aries_inject_cmdline(void) {
+	char *new_command_line;
+	int size;
+	int bootmode;
+	bool charger;
+
+	bootmode = __raw_readl(S5P_INFORM6);
+	// recovery is preferred
+	charger = __raw_readl(S5P_INFORM5) && bootmode != SAMSUNG_REBOOT_MODE_RECOVERY;
+
+	size = strlen(boot_command_line);
+	new_command_line = kmalloc(size + 40 + 10 + (charger ? 7 : 1), GFP_KERNEL);
+	strcpy(new_command_line, saved_command_line);
+	size += sprintf(new_command_line + size, " androidboot.serialno=%08X%08X",
+				system_serial_high, system_serial_low);
+
+	if(charger) {
+		sprintf(new_command_line + size, " bootmode=charger");
+	} else {
+		sprintf(new_command_line + size, " bootmode=%d", bootmode);
+	}
+	saved_command_line = new_command_line;
+}
+
 static void __init aries_machine_init(void)
 {
 	arm_pm_restart = aries_pm_restart;
 
 	setup_ram_console_mem();
-	s3c_usb_set_serial();
-    s3c_power_set_mode(readl(S5P_INFORM5));
+	aries_inject_cmdline();
 	platform_add_devices(aries_devices, ARRAY_SIZE(aries_devices));
 
 	/* smb380 */
