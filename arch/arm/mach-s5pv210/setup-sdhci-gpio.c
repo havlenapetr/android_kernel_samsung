@@ -25,7 +25,7 @@
 
 #include "herring.h"
 
-#if defined (CONFIG_SAMSUNG_GALAXYS) || defined(CONFIG_SAMSUNG_FASCINATE) || defined(CONFIG_SAMSUNG_CAPTIVATE)
+#if defined (CONFIG_SAMSUNG_GALAXYS) || defined(CONFIG_SAMSUNG_FASCINATE)
 #	define DRVSTR S3C_GPIO_DRVSTR_3X
 #else
 #	define DRVSTR S3C_GPIO_DRVSTR_2X
@@ -67,7 +67,7 @@ void s5pv210_setup_sdhci0_cfg_gpio(struct platform_device *dev, int width)
 		gpio_set_value(S5PV210_GPJ2(7), 1);
 	}
 
-	if (machine_is_herring() || machine_is_aries()) {
+	if (machine_is_herring()) { // This is not done for aries in the original kernel
 		gpio_direction_output(S5PV210_GPJ2(7), 1);
 		s3c_gpio_setpull(S5PV210_GPJ2(7), S3C_GPIO_PULL_NONE);
 	}
