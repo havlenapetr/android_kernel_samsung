@@ -5337,16 +5337,11 @@ static void aries_pm_restart(char mode, const char *cmd)
 
 // Ugly hack to inject parameters (e.g. device serial, bootmode) into /proc/cmdline
 static void __init aries_inject_cmdline(void) {
-	char*   new_command_line;
-	int     size;
-	int     bootmode;
-	bool    charger;
+	int bootmode = __raw_readl(S5P_INFORM6);
+	bool charger = __raw_readl(S5P_INFORM5)/* && bootmode != SAMSUNG_REBOOT_MODE_RECOVERY*/;
 
-	bootmode = __raw_readl(S5P_INFORM6);
-	charger = __raw_readl(S5P_INFORM5) && bootmode != SAMSUNG_REBOOT_MODE_RECOVERY;
-
-	size = strlen(boot_command_line);
-	new_command_line = kmalloc(size + 40 + 10 + (charger ? 7 : 1), GFP_KERNEL);
+	int size = strlen(boot_command_line);
+	char* new_command_line = kmalloc(size + 40 + 10 + (charger ? 7 : 0), GFP_KERNEL);
 	strcpy(new_command_line, saved_command_line);
 	size += sprintf(new_command_line + size, " androidboot.serialno=%08X%08X",
 				system_serial_high, system_serial_low);
@@ -5354,11 +5349,14 @@ static void __init aries_inject_cmdline(void) {
 	if(charger) {
 		sprintf(new_command_line + size, " bootmode=charger");
 	}
+/*
     // Only write bootmode when less than 10 to prevent confusion with watchdog
 	// reboot (0xee = 238)
     else if(bootmode < 10) {
 		sprintf(new_command_line + size, " bootmode=%d", bootmode);
 	}
+*/
+
 	saved_command_line = new_command_line;
 }
 
