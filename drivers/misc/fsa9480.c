@@ -104,13 +104,13 @@
 /* Interrupt 1 */
 #define INT_DETACH		(1 << 1)
 #define INT_ATTACH		(1 << 0)
-
+ 
 struct fsa9480_usbsw {
-	struct i2c_client		*client;
-	struct fsa9480_platform_data	*pdata;
-	int				dev1;
-	int				dev2;
-	int				mansw;
+	struct i2c_client	*client;
+	struct fsa9480_platform_data *pdata;
+	int					dev1;
+	int					dev2;
+	int					mansw;
 };
 
 static ssize_t fsa9480_show_control(struct device *dev,
@@ -255,8 +255,24 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 
 	/* Attached */
 	if (val1 || val2) {
+		/* USB OTG */
+		if ((val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) &&
+			val1 & DEV_USB_OTG) {
+			dev_info(&client->dev, "usb_otg cable attached\n");
+#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+			if (pdata->usb_otg_cb)
+				pdata->usb_otg_cb(FSA9480_ATTACHED);
+			if (usbsw->mansw) {
+				ret = i2c_smbus_write_byte_data(client,
+												FSA9480_REG_MANSW1, usbsw->mansw);
+				if (ret < 0)
+					dev_err(&client->dev,
+							"%s: err %d\n", __func__, ret);
+			}
+#endif
 		/* USB */
-		if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
+		} else if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
+			dev_info(&client->dev, "usb cable attached\n");
 			if (pdata->usb_cb)
 				pdata->usb_cb(FSA9480_ATTACHED);
 			if (usbsw->mansw) {
@@ -362,11 +378,22 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		}
 	/* Detached */
 	} else {
+		/* USB OTG */
+		if ((usbsw->dev1 & DEV_T1_USB_MASK || usbsw->dev2 & DEV_T2_USB_MASK) &&
+			usbsw->dev1 & DEV_USB_OTG) {
+			dev_info(&client->dev, "usb_otg cable detached\n");
+#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+			if (pdata->usb_otg_cb) {
+				pdata->usb_otg_cb(FSA9480_DETACHED);
+			}
+#endif
 		/* USB */
-		if (usbsw->dev1 & DEV_T1_USB_MASK ||
+		} if (usbsw->dev1 & DEV_T1_USB_MASK ||
 				usbsw->dev2 & DEV_T2_USB_MASK) {
-			if (pdata->usb_cb)
+			dev_info(&client->dev, "usb cable detached\n");
+			if (pdata->usb_cb) {
 				pdata->usb_cb(FSA9480_DETACHED);
+			}
 		/* UART */
 		} else if (usbsw->dev1 & DEV_T1_UART_MASK ||
 				usbsw->dev2 & DEV_T2_UART_MASK) {
