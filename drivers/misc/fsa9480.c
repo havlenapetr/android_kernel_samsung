@@ -104,14 +104,46 @@
 /* Interrupt 1 */
 #define INT_DETACH		(1 << 1)
 #define INT_ATTACH		(1 << 0)
- 
+
+#define MODE_USB		1
+#define MODE_USB_OTG	2
+
 struct fsa9480_usbsw {
 	struct i2c_client	*client;
 	struct fsa9480_platform_data *pdata;
 	int					dev1;
 	int					dev2;
 	int					mansw;
+	int					mode;
 };
+
+static ssize_t fsa9480_show_mode(struct device *dev,
+					struct device_attribute *attr, char *buf)
+{
+	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
+	switch (usbsw->mode) {
+		case MODE_USB:
+			return sprintf(buf, "USB\n");
+		case MODE_USB_OTG:
+			return sprintf(buf, "OTG\n");
+	}
+	return sprintf(buf, "UNKNOWN\n");
+}
+
+static ssize_t fsa9480_set_mode(struct device *dev,
+					struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fsa9480_usbsw *usbsw = dev_get_drvdata(dev);
+	if (!strncmp(buf, "USB", 3)) {
+		usbsw->mode = MODE_USB;
+	} else 	if (!strncmp(buf, "OTG", 3)) {
+		usbsw->mode = MODE_USB_OTG;
+	} else {
+		return -EINVAL;
+	}
+
+	return count;
+}
 
 static ssize_t fsa9480_show_control(struct device *dev,
 				   struct device_attribute *attr,
@@ -219,12 +251,14 @@ static ssize_t fsa9480_set_manualsw(struct device *dev,
 	return count;
 }
 
+static DEVICE_ATTR(mode, S_IRUGO | S_IWUSR, fsa9480_show_mode, fsa9480_set_mode);
 static DEVICE_ATTR(control, S_IRUGO, fsa9480_show_control, NULL);
 static DEVICE_ATTR(device_type, S_IRUGO, fsa9480_show_device_type, NULL);
 static DEVICE_ATTR(switch, S_IRUGO | S_IWUSR,
 		fsa9480_show_manualsw, fsa9480_set_manualsw);
 
 static struct attribute *fsa9480_attributes[] = {
+	&dev_attr_mode.attr,
 	&dev_attr_control.attr,
 	&dev_attr_device_type.attr,
 	&dev_attr_switch.attr,
@@ -255,26 +289,17 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 
 	/* Attached */
 	if (val1 || val2) {
-		/* USB OTG */
-		if ((val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) &&
-			val1 & DEV_USB_OTG) {
-			dev_info(&client->dev, "usb_otg cable attached\n");
-#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
-			if (pdata->usb_otg_cb)
-				pdata->usb_otg_cb(FSA9480_ATTACHED);
-			if (usbsw->mansw) {
-				ret = i2c_smbus_write_byte_data(client,
-												FSA9480_REG_MANSW1, usbsw->mansw);
-				if (ret < 0)
-					dev_err(&client->dev,
-							"%s: err %d\n", __func__, ret);
-			}
-#endif
 		/* USB */
-		} else if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
-			dev_info(&client->dev, "usb cable attached\n");
-			if (pdata->usb_cb)
-				pdata->usb_cb(FSA9480_ATTACHED);
+		if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
+			if(val1 & DEV_USB_OTG || usbsw->mode == MODE_USB_OTG) {
+				dev_info(&client->dev, "usb_otg cable attached\n");
+				if (pdata->usb_otg_cb)
+					pdata->usb_otg_cb(FSA9480_ATTACHED);
+			} else {
+				dev_info(&client->dev, "usb cable attached\n");
+				if (pdata->usb_cb)
+					pdata->usb_cb(FSA9480_ATTACHED);
+			}
 			if (usbsw->mansw) {
 				ret = i2c_smbus_write_byte_data(client,
 					FSA9480_REG_MANSW1, usbsw->mansw);
@@ -378,21 +403,17 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		}
 	/* Detached */
 	} else {
-		/* USB OTG */
-		if ((usbsw->dev1 & DEV_T1_USB_MASK || usbsw->dev2 & DEV_T2_USB_MASK) &&
-			usbsw->dev1 & DEV_USB_OTG) {
-			dev_info(&client->dev, "usb_otg cable detached\n");
-#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
-			if (pdata->usb_otg_cb) {
-				pdata->usb_otg_cb(FSA9480_DETACHED);
-			}
-#endif
 		/* USB */
-		} if (usbsw->dev1 & DEV_T1_USB_MASK ||
+		if (usbsw->dev1 & DEV_T1_USB_MASK ||
 				usbsw->dev2 & DEV_T2_USB_MASK) {
-			dev_info(&client->dev, "usb cable detached\n");
-			if (pdata->usb_cb) {
-				pdata->usb_cb(FSA9480_DETACHED);
+			if(usbsw->dev1 & DEV_USB_OTG || usbsw->mode == MODE_USB_OTG) {
+				dev_info(&client->dev, "usb_otg cable detached\n");
+				if (pdata->usb_otg_cb)
+					pdata->usb_otg_cb(FSA9480_DETACHED);
+			} else {
+				dev_info(&client->dev, "usb cable detached\n");
+				if (pdata->usb_cb)
+					pdata->usb_cb(FSA9480_DETACHED);
 			}
 		/* UART */
 		} else if (usbsw->dev1 & DEV_T1_UART_MASK ||
@@ -554,6 +575,7 @@ static int __devinit fsa9480_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
+	usbsw->mode = MODE_USB;
 	usbsw->client = client;
 	usbsw->pdata = client->dev.platform_data;
 	if (!usbsw->pdata)

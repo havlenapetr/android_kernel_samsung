@@ -131,6 +131,7 @@ struct s3c_udc {
 
 	struct regulator *udc_vcc_d, *udc_vcc_a;
 	int udc_enabled;
+	int otg_enabled;
 	int soft_disconnected;
 };
 

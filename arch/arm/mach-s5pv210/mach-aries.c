@@ -134,10 +134,6 @@ EXPORT_SYMBOL(sec_get_param_value);
 
 #define SAMSUNG_REBOOT_MODE_RECOVERY	2
 
-#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
-extern void set_otghost_mode(int mode);
-#endif
-
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
 
 struct wifi_mem_prealloc {
@@ -2475,14 +2471,14 @@ static void fsa9480_usb_otg_cb(bool attached)
 {
 	struct usb_gadget *gadget = platform_get_drvdata(&s3c_device_usbgadget);
 	if (gadget) {
-		if (attached)
+		if (attached) {
+			usb_gadget_set_selfpowered(gadget);
 			usb_gadget_vbus_connect(gadget);
-		else
+		} else {
 			usb_gadget_vbus_disconnect(gadget);
+			usb_gadget_clear_selfpowered(gadget);
+		}
 	}
-
-	// otg cable detected
-	set_otghost_mode(attached ? 2 : 0);
 
 	if (charger_callbacks && charger_callbacks->set_cable)
 		charger_callbacks->set_cable(charger_callbacks, CABLE_TYPE_NONE);
@@ -2498,11 +2494,6 @@ static void fsa9480_usb_cb(bool attached)
 		else
 			usb_gadget_vbus_disconnect(gadget);
 	}
-
-#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
-	// client cable detected
-	set_otghost_mode(1);
-#endif
 
 	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
 	if (charger_callbacks && charger_callbacks->set_cable)
