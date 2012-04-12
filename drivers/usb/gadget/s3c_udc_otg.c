@@ -421,13 +421,6 @@ static int s3c_udc_power(struct s3c_udc *dev, char en)
 	return 0;
 }
 
-static int s3c_otg_enable(struct usb_gadget *gadget, int enable)
-{
-	struct s3c_udc *dev = the_controller;
-	dev->otg_enabled = enable;
-	return 0;
-}
-
 static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 {
 	unsigned long flags;
@@ -442,7 +435,7 @@ static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 			udc_disable(dev);
 			clk_disable(otg_clock);
 			s3c_udc_power(dev, 0);
-			if (dev->otg_enabled) {
+			if (gadget->is_otg) {
 #if defined CONFIG_USB_S3C_OTG_HOST
 				platform_driver_unregister(&s5pc110_otg_driver);
 #elif defined CONFIG_USB_DWC_OTG
@@ -451,14 +444,14 @@ static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 				return request_irq(IRQ_OTG, s3c_udc_irq, 0, driver_name, dev);
 			}
 		} else {
-			if (dev->otg_enabled) {
+			if (gadget->is_otg) {
 				free_irq(IRQ_OTG, dev);
 			}
 			s3c_udc_power(dev, 1);
 			clk_enable(otg_clock);
 			udc_reinit(dev);
 			udc_enable(dev);
-			if (dev->otg_enabled) {
+			if (gadget->is_otg) {
 #if defined CONFIG_USB_DWC_OTG
 				return platform_driver_register(&dwc_otg_driver);
 #elif defined CONFIG_USB_S3C_OTG_HOST
@@ -980,7 +973,6 @@ static const struct usb_gadget_ops s3c_udc_ops = {
 	.wakeup = s3c_udc_wakeup,
 	/* current versions must always be self-powered */
 	.pullup = s3c_udc_pullup,
-	.set_selfpowered = s3c_otg_enable,
 	.vbus_session = s3c_vbus_enable,
 };
 
@@ -1246,8 +1238,6 @@ static int s3c_udc_probe(struct platform_device *pdev)
 		printk(KERN_ERR "failed to find udc vcc source\n");
 		return -ENOENT;
 	}
-
-	dev->otg_enabled = 0;
 
 	the_controller = dev;
 	platform_set_drvdata(pdev, dev);

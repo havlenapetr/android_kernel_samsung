@@ -2472,11 +2472,11 @@ static void fsa9480_usb_otg_cb(bool attached)
 	struct usb_gadget *gadget = platform_get_drvdata(&s3c_device_usbgadget);
 	if (gadget) {
 		if (attached) {
-			usb_gadget_set_selfpowered(gadget);
+			gadget->is_otg = true;
 			usb_gadget_vbus_connect(gadget);
 		} else {
 			usb_gadget_vbus_disconnect(gadget);
-			usb_gadget_clear_selfpowered(gadget);
+			gadget->is_otg = false;
 		}
 	}
 
