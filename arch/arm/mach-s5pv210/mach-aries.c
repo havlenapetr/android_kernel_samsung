@@ -2467,17 +2467,14 @@ static struct i2c_board_info i2c_devs8[] __initdata = {
 };
 
 #if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+
+extern int s3c_gadget_otg_enable(struct usb_gadget *gadget, int enable);
+
 static void fsa9480_usb_otg_cb(bool attached)
 {
 	struct usb_gadget *gadget = platform_get_drvdata(&s3c_device_usbgadget);
 	if (gadget) {
-		if (attached) {
-			gadget->is_otg = true;
-			usb_gadget_vbus_connect(gadget);
-		} else {
-			usb_gadget_vbus_disconnect(gadget);
-			gadget->is_otg = false;
-		}
+		s3c_gadget_otg_enable(gadget, attached);
 	}
 
 	if (charger_callbacks && charger_callbacks->set_cable)

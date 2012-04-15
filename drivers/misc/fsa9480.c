@@ -293,6 +293,9 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		if (val1 & DEV_T1_USB_MASK || val2 & DEV_T2_USB_MASK) {
 			if(val1 & DEV_USB_OTG || usbsw->mode == MODE_USB_OTG) {
 				dev_info(&client->dev, "usb_otg cable attached\n");
+				if (usbsw->mode == MODE_USB_OTG) {
+					val1 |= DEV_USB_OTG;
+				}
 				if (pdata->usb_otg_cb)
 					pdata->usb_otg_cb(FSA9480_ATTACHED);
 			} else {
@@ -406,7 +409,7 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 		/* USB */
 		if (usbsw->dev1 & DEV_T1_USB_MASK ||
 				usbsw->dev2 & DEV_T2_USB_MASK) {
-			if(usbsw->dev1 & DEV_USB_OTG || usbsw->mode == MODE_USB_OTG) {
+			if(usbsw->dev1 & DEV_USB_OTG) {
 				dev_info(&client->dev, "usb_otg cable detached\n");
 				if (pdata->usb_otg_cb)
 					pdata->usb_otg_cb(FSA9480_DETACHED);

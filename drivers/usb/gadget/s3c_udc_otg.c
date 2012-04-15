@@ -435,29 +435,11 @@ static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 			udc_disable(dev);
 			clk_disable(otg_clock);
 			s3c_udc_power(dev, 0);
-			if (gadget->is_otg) {
-#if defined CONFIG_USB_S3C_OTG_HOST
-				platform_driver_unregister(&s5pc110_otg_driver);
-#elif defined CONFIG_USB_DWC_OTG
-				platform_driver_unregister(&dwc_otg_driver);
-#endif
-				return request_irq(IRQ_OTG, s3c_udc_irq, 0, driver_name, dev);
-			}
 		} else {
-			if (gadget->is_otg) {
-				free_irq(IRQ_OTG, dev);
-			}
 			s3c_udc_power(dev, 1);
 			clk_enable(otg_clock);
 			udc_reinit(dev);
 			udc_enable(dev);
-			if (gadget->is_otg) {
-#if defined CONFIG_USB_DWC_OTG
-				return platform_driver_register(&dwc_otg_driver);
-#elif defined CONFIG_USB_S3C_OTG_HOST
-				return platform_driver_register(&s5pc110_otg_driver);
-#endif
-			}
 		}
 	} else
 		dev_dbg(&dev->gadget.dev, "%s, udc : %d, en : %d\n",
@@ -465,6 +447,34 @@ static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 
 	return 0;
 }
+
+#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+int s3c_gadget_otg_enable(struct usb_gadget *gadget, int enable)
+{
+	struct s3c_udc *dev = the_controller;
+	if (enable) {
+		free_irq(IRQ_OTG, dev);
+		s3c_vbus_enable(gadget, 1);
+#if defined CONFIG_USB_S3C_OTG_HOST
+		return platform_driver_register(&s5pc110_otg_driver);
+#elif defined CONFIG_USB_DWC_OTG
+		return platform_driver_register(&dwc_otg_driver);
+#endif
+	} else {
+		s3c_vbus_enable(gadget, 0);
+#if defined CONFIG_USB_S3C_OTG_HOST
+		platform_driver_unregister(&s5pc110_otg_driver);
+#elif defined CONFIG_USB_DWC_OTG
+		platform_driver_unregister(&dwc_otg_driver);
+#endif
+		return request_irq(IRQ_OTG, s3c_udc_irq, 0, driver_name, dev);
+	}
+
+	return 0;
+}
+
+EXPORT_SYMBOL(s3c_gadget_otg_enable);
+#endif
 
 /*
  *	done - retire a request; caller blocked irqs
