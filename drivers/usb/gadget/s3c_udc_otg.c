@@ -399,13 +399,6 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 }
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
 
-int s3c_get_drivermode(void)
-{
-	// driver to use: 0: S3C High-speed, 1: S3C Low-speed/Full-speed, 2: DWC
-	return 0;
-}
-EXPORT_SYMBOL(s3c_get_drivermode);
-
 static int s3c_udc_power(struct s3c_udc *dev, char en)
 {
 	pr_debug("%s : %s\n", __func__, en ? "ON" : "OFF");
@@ -449,6 +442,65 @@ static int s3c_vbus_enable(struct usb_gadget *gadget, int enable)
 }
 
 #if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+
+#ifdef CONFIG_USB_S3C_OTG_HOST
+extern struct platform_driver s5pc110_otg_driver;
+#endif
+#ifdef CONFIG_USB_DWC_OTG
+extern struct platform_driver dwc_otg_driver;
+#endif
+
+static ssize_t s3c_gadget_show_mode(struct device *dev,
+					struct device_attribute *attr, char *buf)
+{
+	struct s3c_udc *d = the_controller;
+	switch (d->otg_mode) {
+		case OTG_MODE_HIGH_SPEED:
+			return sprintf(buf, "HSPEED\n");
+		case OTG_MODE_LOW_SPEED:
+			return sprintf(buf, "LSPEED\n");
+		case OTG_MODE_DWC:
+			return sprintf(buf, "DWC\n");
+	}
+	return sprintf(buf, "UNKNOWN\n");
+}
+
+static ssize_t s3c_gadget_set_mode(struct device *dev,
+					struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct s3c_udc *d = the_controller;
+	if (!strncmp(buf, "HSPEED", 6)) {
+		d->otg_mode = OTG_MODE_HIGH_SPEED;
+	} else 	if (!strncmp(buf, "LSPEED", 6)) {
+		d->otg_mode = OTG_MODE_LOW_SPEED;
+	} else 	if (!strncmp(buf, "DWC", 3)) {
+		d->otg_mode = OTG_MODE_DWC;
+	} else {
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(mode, S_IRUGO | S_IWUSR, s3c_gadget_show_mode, s3c_gadget_set_mode);
+
+static struct attribute *s3c_gadget_attributes[] = {
+	&dev_attr_mode.attr,
+	NULL
+};
+
+static const struct attribute_group s3c_gadget_group = {
+	.attrs = s3c_gadget_attributes,
+};
+
+int s3c_get_drivermode(void)
+{
+	struct s3c_udc *d = the_controller;
+	// driver to use: 0: S3C High-speed, 1: S3C Low-speed/Full-speed, 2: DWC
+	return d->otg_mode;
+}
+EXPORT_SYMBOL(s3c_get_drivermode);
+
 int s3c_gadget_otg_enable(struct usb_gadget *gadget, int enable)
 {
 	struct s3c_udc *dev = the_controller;
@@ -1273,6 +1325,14 @@ static int s3c_udc_probe(struct platform_device *pdev)
 
 	disable_irq(IRQ_OTG);
 	create_proc_files();
+
+#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+	dev->otg_mode = OTG_MODE_HIGH_SPEED;
+	retval = sysfs_create_group(&pdev->dev, &s3c_gadget_group);
+	if (retval) {
+		DEBUG(KERN_ERR "failed to create s3c_gadget attribute group\n");
+	}
+#endif
 
 	return retval;
 }

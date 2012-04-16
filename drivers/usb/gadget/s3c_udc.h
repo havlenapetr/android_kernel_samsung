@@ -84,6 +84,10 @@
 #define TEST_PACKET_SEL		0x4
 #define TEST_FORCE_ENABLE_SEL	0x5
 
+#define OTG_MODE_HIGH_SPEED	0
+#define OTG_MODE_LOW_SPEED	1
+#define OTG_MODE_DWC		2
+
 
 typedef enum ep_type {
 	ep_control, ep_bulk_in, ep_bulk_out, ep_interrupt
@@ -132,6 +136,9 @@ struct s3c_udc {
 	struct regulator *udc_vcc_d, *udc_vcc_a;
 	int udc_enabled;
 	int soft_disconnected;
+#if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
+	int otg_mode;
+#endif
 };
 
 extern struct s3c_udc *the_controller;
@@ -145,21 +152,12 @@ extern struct i2c_driver fsa9480_i2c_driver;
 #define ep_maxpacket(EP)	((EP)->ep.maxpacket)
 
 #if defined CONFIG_USB_S3C_OTG_HOST || defined CONFIG_USB_DWC_OTG
-#define USB_OTG_DRIVER_S3CHS 1
-#define USB_OTG_DRIVER_S3CFSLS 2
-#define USB_OTG_DRIVER_S3C USB_OTG_DRIVER_S3CHS | USB_OTG_DRIVER_S3CFSLS
-#define USB_OTG_DRIVER_DWC 4
-#endif
-extern atomic_t g_OtgHostMode; // actual mode: client (0) or host (1)
-extern atomic_t g_OtgOperationMode; // operation mode: 'c'lient, 'h'ost, 'o'tg or 'a'uto-host
-extern atomic_t g_OtgLastCableState; // last cable state: detached (0), client attached (1), otg attached (2)
-extern atomic_t g_OtgDriver; // driver to use: 0: S3C High-speed, 1: S3C Low-speed/Full-speed, 2: DWC
-#ifdef CONFIG_USB_S3C_OTG_HOST
-extern struct platform_driver s5pc110_otg_driver;
-#endif
-#ifdef CONFIG_USB_DWC_OTG
-extern struct platform_driver dwc_otg_driver;
-#endif
-extern int s3c_is_otgmode(void);
+#define USB_OTG_DRIVER_S3CHS	1
+#define USB_OTG_DRIVER_S3CFSLS	2
+#define USB_OTG_DRIVER_S3C		USB_OTG_DRIVER_S3CHS | USB_OTG_DRIVER_S3CFSLS
+#define USB_OTG_DRIVER_DWC		4
+
 extern int s3c_get_drivermode(void);
+#endif
+
 #endif
