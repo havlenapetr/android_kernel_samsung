@@ -140,7 +140,7 @@ static u32 clkdiv_val[5][11] = {
 	{1, 3, 1, 1, 3, 1, 4, 1, 3, 0, 0},
 
 	/* L3 : [200/200/100][166/83][133/66][200/200] */
-	{3, 3, 1, 1, 3, 1, 4, 1, 3, 0, 0},
+	{3, 3, 0, 1, 3, 1, 4, 1, 3, 0, 0},
 
 	/* L4 : [100/100/100][83/83][66/66][100/100] */
 	{7, 7, 0, 0, 7, 0, 9, 0, 7, 0, 0},
@@ -671,6 +671,11 @@ static int s5pv210_cpufreq_reboot_notifier_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
+static struct freq_attr *s5pv210_cpufreq_attr[] = {
+	&cpufreq_freq_attr_scaling_available_freqs,
+	NULL,
+};
+
 static struct cpufreq_driver s5pv210_driver = {
 	.flags		= CPUFREQ_STICKY,
 	.verify		= s5pv210_verify_speed,
@@ -682,6 +687,7 @@ static struct cpufreq_driver s5pv210_driver = {
 	.suspend	= s5pv210_cpufreq_suspend,
 	.resume		= s5pv210_cpufreq_resume,
 #endif
+	.attr		= s5pv210_cpufreq_attr,
 };
 
 static struct notifier_block s5pv210_cpufreq_notifier = {
