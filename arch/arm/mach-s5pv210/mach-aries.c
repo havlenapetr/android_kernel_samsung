@@ -132,8 +132,6 @@ EXPORT_SYMBOL(sec_get_param_value);
 
 #define WLAN_SKB_BUF_NUM	16
 
-#define SAMSUNG_REBOOT_MODE_RECOVERY	2
-
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
 
 struct wifi_mem_prealloc {
@@ -148,7 +146,7 @@ static int aries_notifier_call(struct notifier_block *this,
 
 	if ((code == SYS_RESTART) && _cmd) {
 		if (!strcmp((char *)_cmd, "recovery"))
-			mode = SAMSUNG_REBOOT_MODE_RECOVERY; // It's not REBOOT_MODE_RECOVERY, blame Samsung
+			mode = 2; // It's not REBOOT_MODE_RECOVERY, blame Samsung
 		else
 			mode = REBOOT_MODE_NONE;
 	}
@@ -5339,26 +5337,26 @@ static void aries_pm_restart(char mode, const char *cmd)
 
 // Ugly hack to inject parameters (e.g. device serial, bootmode) into /proc/cmdline
 static void __init aries_inject_cmdline(void) {
-	int bootmode = __raw_readl(S5P_INFORM6);
-	bool charger = __raw_readl(S5P_INFORM5)/* && bootmode != SAMSUNG_REBOOT_MODE_RECOVERY*/;
+	char* new_command_line = NULL;
+	char* bootmode = NULL;
+	int cmd_line_size = strlen(boot_command_line);
 
-	int size = strlen(boot_command_line);
-	char* new_command_line = kmalloc(size + 40 + 10 + (charger ? 7 : 0), GFP_KERNEL);
+	/* Samsung value for recovery */
+	if(__raw_readl(S5P_INFORM6) == 2) {
+		new_command_line = kmalloc(cmd_line_size + 40 + 11, GFP_KERNEL);
+		bootmode = "bootmode=2";
+	} else if(__raw_readl(S5P_INFORM5)) {
+		new_command_line = kmalloc(cmd_line_size + 40 + 17, GFP_KERNEL);
+		bootmode = "bootmode=charger";
+	} else {
+		new_command_line = kmalloc(cmd_line_size + 40, GFP_KERNEL);
+		bootmode = "";
+	}
+
 	strcpy(new_command_line, saved_command_line);
-	size += sprintf(new_command_line + size, " androidboot.serialno=%08X%08X",
-				system_serial_high, system_serial_low);
-
-	if(charger) {
-		sprintf(new_command_line + size, " bootmode=charger");
-	}
-/*
-    // Only write bootmode when less than 10 to prevent confusion with watchdog
-	// reboot (0xee = 238)
-    else if(bootmode < 10) {
-		sprintf(new_command_line + size, " bootmode=%d", bootmode);
-	}
-*/
-
+	sprintf(new_command_line + cmd_line_size,
+			" androidboot.serialno=%08X%08X %s",
+			system_serial_high, system_serial_low, bootmode);
 	saved_command_line = new_command_line;
 }
 
