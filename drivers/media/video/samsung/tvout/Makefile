@@ -20,7 +20,6 @@ obj-$(CONFIG_VIDEO_TVOUT) :=	s5p_tvout.o		\
 				s5p_vp_ctrl.o		\
 				s5p_tvif_ctrl.o
 
-
 obj-$(CONFIG_HDMI_HPD) +=	s5p_tvout_hpd.o
 
 obj-$(CONFIG_HDMI_CEC) +=	s5p_tvout_cec.o
