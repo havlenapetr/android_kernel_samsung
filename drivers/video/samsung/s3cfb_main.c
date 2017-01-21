@@ -149,6 +149,10 @@ err:
 	return -EINVAL;
 }
 
+void read_lcd_register(void)
+{
+}
+
 static int s3cfb_sysfs_show_win_power(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {

@@ -116,6 +116,10 @@
 #include <mach/tmu.h>
 #endif
 
+#if defined(CONFIG_SEC_DEBUG)
+#include <mach/sec_debug.h>
+#endif
+
 #define REG_INFORM4            (S5P_INFORM4)
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
@@ -842,6 +846,13 @@ static struct platform_device odroid_sysfs = {
     .id = -1,
 };
 
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+static struct platform_device watchdog_reset_device = {
+        .name = "watchdog-reset",
+        .id = -1,
+};
+#endif
+
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
 	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.0"),
@@ -1101,7 +1112,9 @@ static struct platform_device *dwmci_emmc_devices[] __initdata = {
 };
 
 static struct platform_device *smdk4x12_devices[] __initdata = {
-
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+        &watchdog_reset_device,
+#endif
 	&odroid_sysfs,
 	&i2c4_gpio_device,
 
@@ -1670,6 +1683,10 @@ static void __init odroid_map_io(void)
 	s3c24xx_init_uarts(smdk4x12_uartcfgs, ARRAY_SIZE(smdk4x12_uartcfgs));
 
 	exynos4_reserve_mem();
+
+#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_init();
+#endif
 }
 
 static void __init exynos_sysmmu_init(void)

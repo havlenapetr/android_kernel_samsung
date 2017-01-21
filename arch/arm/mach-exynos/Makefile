@@ -127,6 +127,9 @@ obj-$(CONFIG_EXYNOS4_SETUP_JPEG)	+= setup-jpeg.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSIM)	+= setup-mipidsim.o
 obj-$(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
+obj-$(CONFIG_SEC_DEBUG)			+= sec_debug.o sec_getlog.o sec_gaf.o
+obj-$(CONFIG_SEC_WATCHDOG_RESET)	+= sec_watchdog.o
+obj-$(CONFIG_SEC_LOG)			+= sec_log.o
 
 obj-$(CONFIG_WAKEUP_ASSIST)		+= wakeup_assist.o
 
